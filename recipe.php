@@ -1,38 +1,40 @@
 <?php
+session_start();
 include 'db_connect.php';
 
 if (isset($_GET['id'])) {
     $recipe_id = $_GET['id'];
 
-    $sql = "SELECT * FROM recipes WHERE id = " . $recipe_id;
-    $result = $conn->query($sql);
+    if (!is_numeric($recipe_id)) {
+        echo "Invalid recipe ID.";
+        exit;
+    }
+
+    $sql = "SELECT * FROM recipes WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $recipe_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows == 1) {
         $recipe = $result->fetch_assoc();
+        $pageTitle = htmlspecialchars($recipe["title"]) . " - The Wandering Wok"; // Dynamic title
     } else {
         echo "Recipe not found.";
         exit;
     }
+    $stmt->close();
+
 } else {
     echo "Invalid recipe ID.";
     exit;
 }
 
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <title><?php echo htmlspecialchars($recipe["title"]); ?></title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Young+Serif&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <style>
-         :root {
+$extraStyles = '<style>
+        img.recipe-image { max-width: 100%; height: auto; margin-bottom: 1rem; }
+        .ingredient-list { list-style-type: disc; padding-left: 20px; }
+        .instruction-step { margin-bottom: 1rem; }
+          :root {
           --primary-color: hsl(14, 45%, 36%);
           --secondary-color: hsl(332, 51%, 32%);
           --body-color: hsl(30, 54%, 90%);
@@ -70,7 +72,7 @@ if (isset($_GET['id'])) {
 
         h1,
         h2 {
-          font-family: 'Young Serif', serif; /* Use Google Font name */
+          font-family: \'Young Serif\', serif; /* Use Google Font name */
         }
 
         h1 {
@@ -86,7 +88,7 @@ if (isset($_GET['id'])) {
         p,
         li {
           color: var(--text-color);
-          font-family: 'Outfit', sans-serif; /* Use Google Font name */
+          font-family: \'Outfit\', sans-serif; /* Use Google Font name */
         }
 
         ul {
@@ -106,7 +108,7 @@ if (isset($_GET['id'])) {
         }
 
         th {
-          font-family: 'Outfit', sans-serif; /* Use Google Font name */
+          font-family: \'Outfit\', sans-serif; /* Use Google Font name */
           font-weight: normal;
         }
 
@@ -145,7 +147,7 @@ if (isset($_GET['id'])) {
         .preparation-time > h2 {
           margin-bottom: 0.5rem;
           color: var(--secondary-color);
-          font-family: 'Outfit', sans-serif; /* Use Google Font name */
+          font-family: \'Outfit\', sans-serif; /* Use Google Font name */
           font-weight: 700;
           font-size: 1.2rem;
         }
@@ -165,7 +167,7 @@ if (isset($_GET['id'])) {
           margin: 1rem 0;
           text-align: left;
           color: var(--text-color);
-          font-family: 'Outfit', sans-serif; /* Use Google Font name */
+          font-family: \'Outfit\', sans-serif; /* Use Google Font name */
         }
 
         @media (max-width: 768px) {
@@ -190,30 +192,10 @@ if (isset($_GET['id'])) {
             width: calc(100% - 4rem);
           }
         }
-    </style>
-</head>
-<body>
+    </style>';
+include 'header.php';
+?>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <div class="container">
-        <a class="navbar-brand" href="index.php">Recipe Website</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link" href="index.php">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="add_recipe.php">Add Recipe</a>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-<div class="container">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="index.php">Home</a></li>
@@ -233,15 +215,15 @@ if (isset($_GET['id'])) {
             <div class="preparation-time">
                 <h2>Preparation time</h2>
                 <ul>
-                  <?php if ($recipe["prep_time_total"] !== null): ?>
+                    <?php if ($recipe["prep_time_total"] !== null): ?>
                         <li><span>Total: </span>Approximately <?php echo htmlspecialchars($recipe["prep_time_total"]); ?> minutes</li>
-                  <?php endif; ?>
-                  <?php if ($recipe["prep_time_prep"] !== null): ?>
+                    <?php endif; ?>
+                    <?php if ($recipe["prep_time_prep"] !== null): ?>
                         <li><span>Preparation: </span><?php echo htmlspecialchars($recipe["prep_time_prep"]); ?> minutes</li>
-                  <?php endif; ?>
-                  <?php if ($recipe["prep_time_cook"] !== null): ?>
+                    <?php endif; ?>
+                    <?php if ($recipe["prep_time_cook"] !== null): ?>
                         <li><span>Cooking: </span><?php echo htmlspecialchars($recipe["prep_time_cook"]); ?> minutes</li>
-                  <?php endif; ?>
+                    <?php endif; ?>
                 </ul>
             </div>
         </section>
@@ -281,30 +263,27 @@ if (isset($_GET['id'])) {
             <table>
                 <tr>
                     <th>Calories</th>
-                    <td><?php echo htmlspecialchars($recipe["calories"] ?? 'N/A'); ?>kcal</td>
+                    <td><?php echo ($recipe["calories"] !== null) ? htmlspecialchars($recipe["calories"]) . 'kcal' : 'N/A'; ?></td>
                 </tr>
                 <tr>
                     <th>Carbs</th>
-                    <td><?php echo htmlspecialchars($recipe["carbs"] ?? 'N/A'); ?>g</td>
+                    <td><?php echo ($recipe["carbs"] !== null) ? htmlspecialchars($recipe["carbs"]) . 'g' : 'N/A'; ?></td>
                 </tr>
                 <tr>
                     <th>Protein</th>
-                    <td><?php echo htmlspecialchars($recipe["protein"] ?? 'N/A'); ?>g</td>
+                    <td><?php echo ($recipe["protein"] !== null) ? htmlspecialchars($recipe["protein"]) . 'g' : 'N/A'; ?></td>
                 </tr>
                 <tr>
                     <th>Fat</th>
-                    <td><?php echo htmlspecialchars($recipe["fat"] ?? 'N/A'); ?>g</td>
+                    <td><?php echo ($recipe["fat"] !== null) ? htmlspecialchars($recipe["fat"]) . 'g' : 'N/A'; ?></td>
                 </tr>
             </table>
         </section>
     </main>
-    <a href="edit_recipe.php?id=<?php echo $recipe["id"]; ?>" class="btn btn-primary">Edit Recipe</a>
-    <a href="delete_recipe.php?id=<?php echo $recipe["id"]; ?>" class="btn btn-danger">Delete Recipe</a>
+     <?php if (isset($_SESSION["user_id"])): ?>
+        <a href="edit_recipe.php?id=<?php echo $recipe["id"]; ?>" class="btn btn-primary">Edit Recipe</a>
+        <a href="delete_recipe.php?id=<?php echo $recipe["id"]; ?>" class="btn btn-danger">Delete Recipe</a>
+     <?php endif; ?>
     <a href="index.php" class="btn btn-secondary">Back to Recipes</a>
-</div>
 
-</body>
-</html>
-<?php
-$conn->close();
-?>
+<?php include 'footer.php'; ?>

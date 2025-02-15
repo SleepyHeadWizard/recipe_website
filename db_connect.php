@@ -1,8 +1,8 @@
 <?php
 $host = "localhost";
-$username = "root"; // Default XAMPP username
-$password = "";     // Default XAMPP password
-$database = "recipe_db"; // Choose a database name
+$username = "root"; // Your database username
+$password = "";     // Your database password
+$database = "recipe_db";
 
 $conn = new mysqli($host, $username, $password, $database);
 
