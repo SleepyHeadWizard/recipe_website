@@ -26,6 +26,7 @@
                         <a class="nav-link" href="add_recipe.php">Add Recipe</a>
                     </li>
                      <li class="nav-item">
+                        <!--  Corrected Logout Link  -->
                         <a class="nav-link" href="logout.php">Logout (<?php echo htmlspecialchars($_SESSION["username"]); ?>)</a>
                     </li>
                 <?php else: ?>
